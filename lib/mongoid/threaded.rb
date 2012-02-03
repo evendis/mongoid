@@ -22,6 +22,10 @@ module Mongoid #:nodoc:
       stack(name).push(true)
     end
 
+    def sessions
+      Thread.current[:"[mongoid]:sessions"] ||= {}
+    end
+
     # Are in the middle of executing the named stack
     #
     # @example Are we in the stack execution?

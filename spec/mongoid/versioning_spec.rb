@@ -259,7 +259,7 @@ describe Mongoid::Versioning do
           version.author.should eq("woodchuck")
         end
 
-        context "when saving multiple times" do
+        pending "when saving multiple times" do
 
           before do
             page.update_attribute(:title, "3")
@@ -313,7 +313,7 @@ describe Mongoid::Versioning do
           end
         end
 
-        context "when saving in succession" do
+        pending "when saving in succession" do
 
           before do
             10.times do |n|
@@ -338,7 +338,7 @@ describe Mongoid::Versioning do
           end
         end
 
-        context "when saving in batches" do
+        pending "when saving in batches" do
 
           before do
             2.times do
@@ -441,7 +441,7 @@ describe Mongoid::Versioning do
     end
   end
 
-  context "when the identity map is enabled" do
+  pending "when the identity map is enabled" do
 
     before do
       Mongoid.identity_map_enabled = true

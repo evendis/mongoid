@@ -22,7 +22,9 @@ module Mongoid #:nodoc:
               values = document.send(field)
               values.delete_if { |val| value.include?(val) }
               values.tap do
-                collection.update(document.atomic_selector, operation("$pullAll"), options)
+                # collection.update(document.atomic_selector, operation("$pullAll"), options)
+                collection.find(document.atomic_selector).
+                  update(operation("$pullAll"))
                 document.remove_change(field) if document.persisted?
               end
             end

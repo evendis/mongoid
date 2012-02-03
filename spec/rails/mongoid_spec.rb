@@ -16,13 +16,13 @@ describe "Rails::Mongoid" do
 
       before do
         Rails::Mongoid.expects(:determine_model).returns(model)
-        model.expects(:create_indexes).raises(Mongo::MongoArgumentError)
+        model.expects(:create_indexes).raises(Moped::Errors::OperationFailure)
       end
 
       it "is not swallowed" do
         expect {
           Rails::Mongoid.create_indexes("spec/app/models/**/*.rb")
-        }.to raise_error(Mongo::MongoArgumentError)
+        }.to raise_error(Moped::Errors::OperationFailure)
       end
     end
 

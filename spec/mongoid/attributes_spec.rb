@@ -46,13 +46,15 @@ describe Mongoid::Attributes do
     context "when the document is an existing record" do
 
       let!(:person) do
-        Person.create
+        Person.create(:title => "sir")
       end
 
       context "when the attribute does not exist" do
 
         before do
-          person.collection.update({:_id => person.id}, {'$unset' => {:age => 1}})
+          person.collection
+            .find({ :_id => person.id })
+            .update({ "$unset" => { :age => 1 }})
         end
 
         context "when found" do
@@ -832,7 +834,9 @@ describe Mongoid::Attributes do
       context "when the attribute does not exist" do
 
         before do
-          person.collection.update({:_id => person.id}, {'$unset' => {:age => 1}})
+          person.collection
+            .find({ :_id => person.id })
+            .update({ "$unset" => { :age => 1 }})
           Mongoid.raise_not_found_error = false
           person.reload
           Mongoid.raise_not_found_error = true
@@ -879,7 +883,9 @@ describe Mongoid::Attributes do
       context "when the attribute does not exist" do
 
         before do
-          person.collection.update({:_id => person.id}, {'$unset' => {:age => 1}})
+          person.collection
+            .find({ :_id => person.id })
+            .update({ "$unset" => { :age => 1 }})
           Mongoid.raise_not_found_error = false
           person.reload
           Mongoid.raise_not_found_error = true

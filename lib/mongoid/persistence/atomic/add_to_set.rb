@@ -25,7 +25,9 @@ module Mongoid #:nodoc:
             end
             values.tap do
               if document.persisted?
-                collection.update(document.atomic_selector, operation("$addToSet"), options)
+                # collection.update(document.atomic_selector, operation("$addToSet"), options)
+                collection.find(document.atomic_selector).
+                  update(operation("$addToSet"))
                 document.remove_change(field)
               end
             end

@@ -25,10 +25,12 @@ require "time"
 require "active_support/core_ext"
 require 'active_support/json'
 require "active_support/inflector"
-require "active_support/lazy_load_hooks"
 require "active_support/time_with_zone"
 require "active_model"
-require "mongo"
+
+require "moped"
+BSON = Moped::BSON
+
 require "mongoid/extensions"
 require "mongoid/errors"
 require "mongoid/threaded"
@@ -36,13 +38,10 @@ require "mongoid/relations"
 require "mongoid/atomic"
 require "mongoid/attributes"
 require "mongoid/callbacks"
-require "mongoid/collection"
-require "mongoid/collections"
 require "mongoid/config"
-require "mongoid/contexts"
+require "mongoid/contextual"
 require "mongoid/copyable"
 require "mongoid/criteria"
-require "mongoid/cursor"
 require "mongoid/default_scope"
 require "mongoid/dirty"
 require "mongoid/extras"
@@ -67,6 +66,7 @@ require "mongoid/reloading"
 require "mongoid/safety"
 require "mongoid/scope"
 require "mongoid/serialization"
+require "mongoid/sessions"
 require "mongoid/sharding"
 require "mongoid/state"
 require "mongoid/timestamps"
@@ -112,7 +112,6 @@ module Mongoid #:nodoc
   def configure
     block_given? ? yield(Config) : Config
   end
-  alias :config :configure
 
   # We can process a unit of work in Mongoid and have the identity map
   # automatically clear itself out after the work is complete.

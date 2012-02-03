@@ -114,6 +114,17 @@ en:
             knowing which environment it is in, and we have considered
             defaulting to development an undesireable side effect of this not
             being defined."
+        no_session_config:
+          message: "No configuration could be found for a session named
+            '%{name}'."
+          summary: "When attempting to create the new session, Mongoid could
+            not find a session configuration for the name: '%{name}'. This is
+            necessary in order to know the host, port, and options needed
+            to connect."
+          resolution: "Double check your mongoid.yml to make sure under the
+            sessions key that a configuration exists for '%{name}'. If you
+            have set the configuration programatically, ensure that '%{name}'
+            exists in the configuration hash."
         scope_overwrite:
           message: "Cannot create scope :%{scope_name}, because of existing
             method %{model_name}.%{scope_name}."

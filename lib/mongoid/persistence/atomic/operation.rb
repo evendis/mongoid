@@ -33,7 +33,7 @@ module Mongoid #:nodoc:
         # @since 2.0.0
         def initialize(document, field, value, options = {})
           @document, @field, @value = document, field.to_s, value
-          @options = Safety.merge_safety_options(options)
+          @options = options
         end
 
         # Get the atomic operation to perform.

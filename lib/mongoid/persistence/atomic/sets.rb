@@ -19,7 +19,9 @@ module Mongoid #:nodoc:
           prepare do
             document[field] = value
             document[field].tap do
-              collection.update(document.atomic_selector, operation("$set"), options)
+              # collection.update(document.atomic_selector, operation("$set"), options)
+              collection.find(document.atomic_selector).
+                update(operation("$set"))
               document.remove_change(field)
             end
           end

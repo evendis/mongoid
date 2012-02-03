@@ -18,7 +18,7 @@ ENV["MONGOID_SPEC_PORT"] ||= "27017"
 
 # These are used when creating any connection in the test suite.
 HOST = ENV["MONGOID_SPEC_HOST"]
-PORT = ENV["MONGOID_SPEC_PORT"]
+PORT = ENV["MONGOID_SPEC_PORT"].to_i
 
 # Convenience for creating a new logger for debugging.
 LOGGER = Logger.new($stdout)
@@ -31,12 +31,8 @@ def database_id
   ENV["CI"] ? "mongoid_#{Process.pid}" : "mongoid_test"
 end
 
-Mongoid.configure do |config|
-  database = Mongo::Connection.new(HOST, PORT).db(database_id)
-  database.add_user("mongoid", "test")
-  config.master = database
-  config.logger = nil
-end
+Mongoid.databases = { :default => { :name => database_id }}
+Mongoid::Sessions::Factory.default
 
 # Autoload every model for the test suite that sits in spec/app/models.
 Dir[ File.join(MODELS, "*.rb") ].sort.each do |file|
@@ -70,12 +66,12 @@ RSpec.configure do |config|
 
   # We filter out specs that require authentication to MongoHQ if the
   # environment variables have not been set up locally.
-  mongohq_configured = Support::MongoHQ.configured?
-  warn(Support::MongoHQ.message) unless mongohq_configured
+  # mongohq_configured = Support::MongoHQ.configured?
+  # warn(Support::MongoHQ.message) unless mongohq_configured
 
-  config.filter_run_excluding(:config => lambda { |value|
-    return true if value == :mongohq && !mongohq_configured
-  })
+  # config.filter_run_excluding(:config => lambda { |value|
+    # return true if value == :mongohq && !mongohq_configured
+  # })
 end
 
 ActiveSupport::Inflector.inflections do |inflect|

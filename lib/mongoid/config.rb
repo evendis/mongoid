@@ -1,55 +1,30 @@
 # encoding: utf-8
 require "uri"
-require "mongoid/config/database"
 require "mongoid/config/environment"
-require "mongoid/config/replset_database"
 require "mongoid/config/options"
 
 module Mongoid #:nodoc
 
   # This module defines all the configuration options for Mongoid, including the
   # database connections.
-  #
-  # @todo Durran: This module needs an overhaul, remove singleton, etc.
   module Config
     extend self
     extend Options
     include ActiveModel::Observing
-
-    # @attribute [rw] master The master database.
-    attr_accessor :reconnect
 
     option :allow_dynamic_fields, :default => true
     option :autocreate_indexes, :default => false
     option :identity_map_enabled, :default => false
     option :include_root_in_json, :default => false
     option :include_type_for_serialization, :default => false
-    option :max_retries_on_connection_failure, :default => 0
-    option :scope_overwrite_exception, :default => false
     option :persist_in_safe_mode, :default => false
     option :preload_models, :default => false
     option :raise_not_found_error, :default => true
+    option :scope_overwrite_exception, :default => false
     option :skip_version_check, :default => false
     option :time_zone, :default => nil
     option :use_activesupport_time_zone, :default => true
     option :use_utc, :default => false
-
-    # Get any extra databases that have been configured.
-    #
-    # @example Get the extras.
-    #   config.databases
-    #
-    # @return [ Hash ] A hash of secondary databases.
-    def databases
-      @databases ||= nil
-      configure_extras(@settings["databases"]) unless @databases || !@settings
-      @databases || {}
-    end
-
-    # @todo Durran: There were no tests around the databases setter, not sure
-    # what the exact expectation was. Set with a hash?
-    def databases=(databases)
-    end
 
     # Return field names that could cause destructive things to happen if
     # defined in a Mongoid::Document.
@@ -60,21 +35,6 @@ module Mongoid #:nodoc
     # @return [ Array<String> ] An array of bad field names.
     def destructive_fields
       Components.prohibited_methods
-    end
-
-    # Configure mongoid from a hash. This is usually called after parsing a
-    # yaml config file such as mongoid.yml.
-    #
-    # @example Configure Mongoid.
-    #   config.from_hash({})
-    #
-    # @param [ Hash ] options The settings to use.
-    def from_hash(options = {})
-      options.except("database", "slaves", "databases").each_pair do |name, value|
-        send("#{name}=", value) if respond_to?("#{name}=")
-      end
-      @master, @slaves = configure_databases(options)
-      configure_extras(options["databases"])
     end
 
     # Load the settings from a compliant mongoid.yml file. This can be used for
@@ -88,7 +48,7 @@ module Mongoid #:nodoc
     # @since 2.0.1
     def load!(path)
       Environment.load_yaml(path).tap do |settings|
-        from_hash(settings) if settings.present?
+        load_configuration(settings) if settings.present?
       end
     end
 
@@ -100,6 +60,38 @@ module Mongoid #:nodoc
     # @return [ Logger ] The default Logger instance.
     def default_logger
       defined?(Rails) && Rails.respond_to?(:logger) ? Rails.logger : ::Logger.new($stdout)
+    end
+
+    def load_configuration(settings)
+      configuration = settings.with_indifferent_access
+      self.databases = configuration[:databases]
+      self.options = configuration[:options]
+      self.sessions = configuration[:sessions]
+    end
+
+    def databases
+      @databases ||= {}
+    end
+
+    def databases=(databases)
+      # @todo: Durran: Validate database options.
+      @databases = databases.with_indifferent_access
+    end
+
+    def options=(options)
+      # @todo: Durran: Validate options.
+      options.each_pair do |option, value|
+        send("#{option}=", value)
+      end
+    end
+
+    def sessions
+      @sessions ||= {}
+    end
+
+    def sessions=(sessions)
+      # @todo: Durran: Validate session options.
+      @sessions = sessions.with_indifferent_access
     end
 
     # Returns the logger, or defaults to Rails logger or stdout logger.
@@ -135,123 +127,12 @@ module Mongoid #:nodoc
     #
     # @since 2.0.2
     def purge!
-      master.collections.map do |collection|
-        collection.drop if collection.name !~ /system/
-      end
-    end
-
-    # Sets the Mongo::DB master database to be used. If the object trying to be
-    # set is not a valid +Mongo::DB+, then an error will be raised.
-    #
-    # @example Set the master database.
-    #   config.master = Mongo::Connection.new.db("test")
-    #
-    # @param [ Mongo::DB ] db The master database.
-    #
-    # @raise [ Errors::InvalidDatabase ] If the master isnt a valid object.
-    #
-    # @return [ Mongo::DB ] The master instance.
-    def master=(db)
-      check_database!(db)
-      @master = db
-    end
-    alias :database= :master=
-
-    # Returns the master database, or if none has been set it will raise an
-    # error.
-    #
-    # @example Get the master database.
-    #   config.master
-    #
-    # @raise [ Errors::InvalidDatabase ] If the database was not set.
-    #
-    # @return [ Mongo::DB ] The master database.
-    def master
-      unless @master
-        @master, @slaves = configure_databases(@settings) unless @settings.blank?
-        raise Errors::InvalidDatabase.new(nil) unless @master
-      end
-      if reconnect
-        self.reconnect = false
-        reconnect!
-      end
-      @master
-    end
-    alias :database :master
-
-    # Convenience method for connecting to the master database after forking a
-    # new process.
-    #
-    # @example Reconnect to the master.
-    #   Mongoid.reconnect!
-    #
-    # @param [ true, false ] now Perform the reconnection immediately?
-    def reconnect!(now = true)
-      if now
-        master.connection.connect
-      else
-        # We set a @reconnect flag so that #master knows to reconnect the next
-        # time the connection is accessed.
-        self.reconnect = true
-      end
-    end
-
-    protected
-
-    # Check if the database is valid and the correct version.
-    #
-    # @example Check if the database is valid.
-    #   config.check_database!
-    #
-    # @param [ Mongo::DB ] database The db to check.
-    #
-    # @raise [ Errors::InvalidDatabase ] If the object is not valid.
-    # @raise [ Errors::UnsupportedVersion ] If the db version is too old.
-    def check_database!(database)
-      raise Errors::InvalidDatabase.new(database) unless database.kind_of?(Mongo::DB)
-      unless skip_version_check
-        version = database.connection.server_version
-        raise Errors::UnsupportedVersion.new(version) if version < Mongoid::MONGODB_VERSION
-      end
-    end
-
-    # Get a database from settings.
-    #
-    # @example Configure the master and slave dbs.
-    #   config.configure_databases("database" => "mongoid")
-    #
-    # @param [ Hash ] options The options to use.
-    #
-    # @option options [ String ] :database The database name.
-    # @option options [ String ] :host The database host.
-    # @option options [ String ] :password The password for authentication.
-    # @option options [ Integer ] :port The port for the database.
-    # @option options [ Array<Hash> ] :slaves The slave db options.
-    # @option options [ String ] :uri The uri for the database.
-    # @option options [ String ] :username The user for authentication.
-    #
-    # @since 2.0.0.rc.1
-    def configure_databases(options)
-      if options.has_key?('hosts')
-        ReplsetDatabase.new(options).configure
-      else
-        Database.new(options).configure
-      end
-    end
-
-    # Get the secondary databases from settings.
-    #
-    # @example Configure the master and slave dbs.
-    #   config.configure_extras("databases" => settings)
-    #
-    # @param [ Hash ] options The options to use.
-    #
-    # @since 2.0.0.rc.1
-    def configure_extras(extras)
-      @databases = (extras || []).inject({}) do |dbs, (name, options)|
-        dbs.tap do |extra|
-        dbs[name], dbs["#{name}_slaves"] = configure_databases(options)
-        end
+      session = Threaded.sessions[:default] || Sessions::Factory.default
+      session.use Mongoid.databases[:default][:name]
+      collections = session["system.namespaces"].find(name: { "$not" => /system|\$/ }).to_a
+      collections.each do |collection|
+        _, name = collection["name"].split(".", 2)
+        session[name].drop
       end
     end
   end

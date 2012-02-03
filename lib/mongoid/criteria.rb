@@ -23,6 +23,7 @@ module Mongoid #:nodoc:
   #   criteria.only(:field).where(:field => "value").skip(20).limit(20)
   #   criteria.execute
   class Criteria
+    include Contextual
     include Enumerable
     include Criterion::Builder
     include Criterion::Creational
@@ -40,33 +41,6 @@ module Mongoid #:nodoc:
       :options,
       :selector,
       :field_list
-
-    delegate \
-      :add_to_set,
-      :aggregate,
-      :avg,
-      :blank?,
-      :count,
-      :size,
-      :length,
-      :delete,
-      :delete_all,
-      :destroy,
-      :destroy_all,
-      :distinct,
-      :empty?,
-      :execute,
-      :first,
-      :group,
-      :last,
-      :max,
-      :min,
-      :one,
-      :pull,
-      :shift,
-      :sum,
-      :update,
-      :update_all, :to => :context
 
     # Concatinate the criteria with another enumerable. If the other is a
     # +Criteria+ then it needs to get the collection from it.
@@ -103,56 +77,10 @@ module Mongoid #:nodoc:
       when Criteria
         self.selector == other.selector && self.options == other.options
       when Enumerable
-        return (execute.entries == other)
+        return (entries == other)
       else
         return false
       end
-    end
-
-    # Get the collection associated with the criteria.
-    #
-    # @example Get the collection.
-    #   criteria.collection
-    #
-    # @return [ Collection ] The collection.
-    #
-    # @since 2.2.0
-    def collection
-      klass.collection
-    end
-
-    # Return or create the context in which this criteria should be executed.
-    #
-    # This will return an Enumerable context if the class is embedded,
-    # otherwise it will return a Mongo context for root classes.
-    #
-    # @example Get the appropriate context.
-    #   criteria.context
-    #
-    # @return [ Mongo, Enumerable ] The appropriate context.
-    def context
-      @context ||= Contexts.context_for(self, embedded)
-    end
-
-    # Iterate over each +Document+ in the results. This can take an optional
-    # block to pass to each argument in the results.
-    #
-    # @example Iterate over the criteria results.
-    #   criteria.each { |doc| p doc }
-    #
-    # @return [ Criteria ] The criteria itself.
-    def each(&block)
-      tap { context.iterate(&block) }
-    end
-
-    # Return true if the criteria has some Document or not.
-    #
-    # @example Are there any documents for the criteria?
-    #   criteria.exists?
-    #
-    # @return [ true, false ] If documents match.
-    def exists?
-      context.count > 0
     end
 
     # Extract a single id from the provided criteria. Could be in an $and
@@ -165,7 +93,7 @@ module Mongoid #:nodoc:
     #
     # @since 2.3.0
     def extract_id
-      selector[:_id]
+      selector.extract_id
     end
 
     # When freezing a criteria we need to initialize the context first
@@ -304,18 +232,6 @@ module Mongoid #:nodoc:
     # @return [ Array ] The array to compare with.
     def comparable(other)
       other.is_a?(Criteria) ? other.entries : other
-    end
-
-    # Get the raw driver collection from the criteria.
-    #
-    # @example Get the raw driver collection.
-    #   criteria.driver
-    #
-    # @return [ Mongo::Collection ] The driver collection.
-    #
-    # @since 2.2.0
-    def driver
-      collection.driver
     end
 
     # Clone or dup the current +Criteria+. This will return a new criteria with

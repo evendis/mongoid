@@ -53,7 +53,8 @@ module Mongoid #:nodoc:
           # @since 2.0.0
           def execute(collection)
             if collection && consumed?
-              collection.update(selector, operations, options)
+              # collection.update(selector, operations, options)
+              collection.find(selector).update(operations)
             end
           end
         end

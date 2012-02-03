@@ -24,11 +24,8 @@ describe Mongoid::Indexes do
     let(:klass) do
       Class.new do
         include Mongoid::Document
-        store_in :test_class
-
-        def self.index_options
-          { :_type => { :unique => false, :background => true }}
-        end
+        store_in collection: "test_class"
+        index _type: 1, unique: false, background: true
       end
     end
 
@@ -37,7 +34,7 @@ describe Mongoid::Indexes do
     end
 
     it "creates the indexes" do
-      klass.index_information["_type_1"].should_not be_nil
+      klass.collection.indexes[_type: 1].should_not be_nil
     end
   end
 
@@ -59,7 +56,7 @@ describe Mongoid::Indexes do
       end
 
       it "adds the _type index" do
-        klass.index_options[:_type].should eq(
+        klass.index_options[_type: 1].should eq(
           { :unique => false, :background => true }
         )
       end
@@ -77,22 +74,22 @@ describe Mongoid::Indexes do
     context "when unique" do
 
       before do
-        klass.index(:name, :unique => true)
+        klass.index(:name => 1, :unique => true)
       end
 
       it "creates a unique index on the collection" do
-        klass.index_options[:name].should eq({:unique => true})
+        klass.index_options[name: 1].should eq({:unique => true})
       end
     end
 
     context "when not unique" do
 
       before do
-        klass.index(:name)
+        klass.index(:name => 1)
       end
 
       it "creates an index on the collection" do
-        klass.index_options[:name].should eq({:unique => false})
+        klass.index_options[name: 1].should eq({:unique => false})
       end
     end
   end

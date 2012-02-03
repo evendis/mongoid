@@ -283,7 +283,7 @@ module Mongoid # :nodoc:
               :metadata => metadata,
               :default => metadata.foreign_key_default
             )
-            index(key, :background => true) if metadata.indexed?
+            index(key => 1, background: true) if metadata.indexed?
           end
         end
 

@@ -720,7 +720,7 @@ describe Mongoid::Document do
       let(:model) do
         Class.new do
           include Mongoid::Document
-          store_in :anonymous
+          store_in collection: "anonymous"
           field :gender
         end
       end

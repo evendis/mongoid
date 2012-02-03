@@ -20,7 +20,9 @@ module Mongoid #:nodoc:
           prepare do
             document[field] = [] unless document[field]
             document.send(field).concat(value).tap do |value|
-              collection.update(document.atomic_selector, operation("$pushAll"), options)
+              # collection.update(document.atomic_selector, operation("$pushAll"), options)
+              collection.find(document.atomic_selector).
+                update(operation("$pushAll"))
               document.remove_change(field)
             end
           end

@@ -28,12 +28,12 @@ class Person
   field :reading, :type => Object
   field :bson_id, :type => BSON::ObjectId
 
-  index :age
-  index :addresses
-  index :dob
-  index :name
-  index :title
-  index :ssn, :unique => true
+  index age: 1
+  index addresses: 1
+  index dob: 1
+  index name: 1
+  index title: 1
+  index ssn: 1, unique: true
 
   validates_format_of :ssn, :without => /\$\$\$/
 
